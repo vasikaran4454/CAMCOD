@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChromaPick | Vision Robot Arm</title>
+<style>
+:root{--bg:#070b16;--card:#0e1528;--line:#1e2a4a;--txt:#e8eeff;--mut:#8b98bd;--red:#ff3b5c;--blue:#2f8bff;--green:#25e08a;--acc:#7c5cff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:0;color:inherit}
+.bgfx{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 20% 20%,#16204a,transparent 50%),radial-gradient(circle at 80% 80%,#2a1450,transparent 50%),var(--bg);animation:hue 14s linear infinite alternate}
+@keyframes hue{to{filter:hue-rotate(40deg)}}
+.blob{position:fixed;border-radius:50%;filter:blur(60px);opacity:.35;z-index:-1;animation:float 9s ease-in-out infinite}
+.b1{width:260px;height:260px;background:var(--red);top:8%;left:6%}
+.b2{width:300px;height:300px;background:var(--blue);bottom:6%;left:40%;animation-delay:-3s}
+.b3{width:240px;height:240px;background:var(--green);top:30%;right:6%;animation-delay:-6s}
+@keyframes float{50%{transform:translate(30px,-40px) scale(1.15)}}
+
+/* ---------- WELCOME ---------- */
+#welcome{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .7s,transform .7s}
+#welcome.out{opacity:0;transform:scale(1.08);pointer-events:none}
+.arm{width:230px;height:230px;filter:drop-shadow(0 0 24px #7c5cff88);animation:rise 1s both}
+.arm .j1{transform-origin:100px 170px;animation:sw1 4s ease-in-out infinite}
+.arm .j2{transform-origin:100px 105px;animation:sw2 4s ease-in-out infinite}
+@keyframes sw1{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(18deg)}}
+@keyframes sw2{0%,100%{transform:rotate(30deg)}50%{transform:rotate(-35deg)}}
+.arm .ball{animation:bl 2s ease-in-out infinite alternate}
+@keyframes bl{to{transform:translateY(-6px)}}
+h1{font-size:clamp(2.6rem,8vw,5rem);font-weight:800;letter-spacing:2px;margin-top:6px;background:linear-gradient(90deg,var(--red),var(--acc),var(--blue),var(--green),var(--red));background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite,rise 1s .2s both}
+@keyframes flow{to{background-position:300% 0}}
+.sub{color:var(--mut);font-size:1.15rem;margin-top:10px;animation:rise 1s .4s both}
+.dots{display:flex;gap:14px;margin:26px 0;animation:rise 1s .6s both}
+.dots i{width:16px;height:16px;border-radius:50%;animation:bounce 1.2s ease-in-out infinite}
+.dots i:nth-child(1){background:var(--red);box-shadow:0 0 16px var(--red)}
+.dots i:nth-child(2){background:var(--blue);box-shadow:0 0 16px var(--blue);animation-delay:.15s}
+.dots i:nth-child(3){background:var(--green);box-shadow:0 0 16px var(--green);animation-delay:.3s}
+@keyframes bounce{50%{transform:translateY(-12px)}}
+@keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+.enter{position:relative;overflow:hidden;padding:16px 44px;font-size:1.1rem;font-weight:700;border-radius:60px;background:linear-gradient(135deg,var(--acc),#4f8bff);box-shadow:0 0 0 0 #7c5cff99;animation:rise 1s .8s both,ring 2s 1.8s infinite;transition:transform .2s}
+.enter:hover{transform:scale(1.07)}
+.enter::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(90deg,transparent,#fff5,transparent);transform:skewX(-20deg);animation:shine 2.6s infinite}
+@keyframes shine{to{left:150%}}
+@keyframes ring{to{box-shadow:0 0 0 26px #7c5cff00}}
+.flow{margin-top:34px;color:var(--mut);font-size:.9rem;animation:rise 1s 1s both}
+.flow b{color:var(--txt)}
+
+/* ---------- APP ---------- */
+#app{display:none;max-width:1250px;margin:0 auto;padding:18px}
+#app.show{display:block;animation:rise .8s both}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.brand{font-weight:800;font-size:1.5rem;letter-spacing:1px;background:linear-gradient(90deg,var(--red),var(--blue),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:30px;background:var(--card);border:1px solid var(--line);font-size:.85rem}
+.pill i{width:9px;height:9px;border-radius:50%;background:#555}
+.pill.on i{background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.35}}
+select,.ghost{background:var(--card);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:30px;font-size:.85rem;transition:.2s}
+.ghost:hover{border-color:var(--acc);box-shadow:0 0 14px #7c5cff55}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}
+.cam{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.cam video,.cam canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan{position:absolute;left:0;right:0;height:3px;top:0;background:linear-gradient(90deg,transparent,#7cf,transparent);box-shadow:0 0 22px 6px #6cf8;opacity:0}
+.scanning .scan{opacity:1;animation:scan 1.6s ease-in-out infinite alternate}
+@keyframes scan{to{top:calc(100% - 3px)}}
+.corner{position:absolute;width:26px;height:26px;border:3px solid #fff9}
+.c1{top:10px;left:10px;border-right:0;border-bottom:0}.c2{top:10px;right:10px;border-left:0;border-bottom:0}
+.c3{bottom:10px;left:10px;border-right:0;border-top:0}.c4{bottom:10px;right:10px;border-left:0;border-top:0}
+.msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mut);background:#000c;z-index:3}
+.bar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:.9rem}
+.chip{padding:6px 12px;border-radius:10px;background:#141d38;border:1px solid var(--line)}
+.chip b{color:#fff}
+h3{font-size:.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--mut);margin-bottom:12px}
+.btns{display:grid;gap:14px}
+.cbtn{--c:#fff;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:20px 22px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 26%,#0e1528),#0e1528);border:2px solid color-mix(in srgb,var(--c) 55%,transparent);text-align:left;transition:transform .2s,box-shadow .2s;animation:pulse 2.6s infinite}
+.cbtn:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 34px color-mix(in srgb,var(--c) 45%,transparent)}
+.cbtn:active{transform:scale(.97)}
+.cbtn .n{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:1.5rem;font-weight:800;background:var(--c);color:#06101f;box-shadow:0 0 22px var(--c);transition:transform .5s}
+.cbtn:hover .n{transform:rotate(360deg)}
+.cbtn strong{font-size:1.3rem;letter-spacing:2px;display:block}
+.cbtn small{color:var(--mut)}
+.cbtn.active{animation:none;box-shadow:0 0 0 3px var(--c),0 0 40px var(--c);transform:scale(1.03)}
+.cbtn.busy:not(.active){opacity:.4;filter:grayscale(.6);pointer-events:none;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 50%,transparent)}70%,100%{box-shadow:0 0 0 18px transparent}}
+.rip{position:absolute;border-radius:50%;background:#fff6;transform:scale(0);animation:rp .7s ease-out forwards;pointer-events:none}
+@keyframes rp{to{transform:scale(4);opacity:0}}
+.steps{display:flex;justify-content:space-between;margin:20px 0 6px;position:relative}
+.steps::before{content:"";position:absolute;top:17px;left:8%;right:8%;height:3px;background:var(--line)}
+.step{position:relative;text-align:center;font-size:.72rem;color:var(--mut);flex:1}
+.step span{display:grid;place-items:center;width:36px;height:36px;margin:0 auto 6px;border-radius:50%;background:#141d38;border:2px solid var(--line);transition:.4s;position:relative;z-index:1}
+.step.active span{border-color:var(--acc);box-shadow:0 0 18px var(--acc);animation:blink 1s infinite}
+.step.done span{background:var(--green);border-color:var(--green);color:#041;transform:scale(1.1)}
+.step.done{color:var(--txt)}
+#status{margin-top:14px;padding:12px 14px;border-radius:12px;background:#141d38;border-left:4px solid var(--acc);font-size:.95rem}
+#log{margin-top:14px;max-height:150px;overflow:auto;font:12px Consolas,monospace;color:var(--mut)}
+#log div{padding:3px 0;border-bottom:1px solid #16203c;animation:rise .4s both}
+#log b{color:#5c6b99;font-weight:400;margin-right:6px}
+#log .ok{color:var(--green)}#log .bad{color:var(--red)}#log .tx{color:#9db7ff}
+#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:#1b2547;border:1px solid var(--acc);padding:12px 22px;border-radius:30px;transition:.4s;z-index:9}
+#toast.show{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="bgfx"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<!-- ================= WELCOME ================= -->
+<section id="welcome">
+  <svg class="arm" viewBox="0 0 200 200">
+    <rect x="60" y="170" width="80" height="16" rx="8" fill="#2a3566"/>
+    <g class="j1">
+      <rect x="92" y="105" width="16" height="70" rx="8" fill="#7c5cff"/>
+      <g class="j2">
+        <rect x="92" y="45" width="16" height="66" rx="8" fill="#4f8bff"/>
+        <circle cx="100" cy="105" r="9" fill="#e8eeff"/>
+        <path d="M90 50 L90 34 M110 50 L110 34" stroke="#25e08a" stroke-width="5" stroke-linecap="round"/>
+        <circle class="ball" cx="100" cy="26" r="9" fill="#ff3b5c"/>
+      </g>
+    </g>
+    <circle cx="100" cy="170" r="9" fill="#e8eeff"/>
+  </svg>
+  <h1>ChromaPick</h1>
+  <p class="sub">Vision-Guided Pick &amp; Place Robot Arm</p>
+  <div class="dots"><i></i><i></i><i></i></div>
+  <button class="enter" id="enterBtn">Enter Control Panel</button>
+  <p class="flow"><b>Press a button</b> &rarr; <b>Webcam finds the ball</b> &rarr; <b>Robot arm picks it</b></p>
+</section>
+
+<!-- ================= APP ================= -->
+<main id="app">
+  <header>
+    <div class="brand">ChromaPick</div>
+    <div class="tools">
+      <div class="pill" id="pCam"><i></i><span>Camera off</span></div>
+      <div class="pill" id="pArm"><i></i><span>Arm: Simulation</span></div>
+      <select id="camSel" title="Camera"></select>
+      <button class="ghost" id="connBtn">Connect Arm (USB)</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Live Camera</h3>
+      <div class="cam" id="cam">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="ov"></canvas>
+        <div class="scan"></div>
+        <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+        <div class="msg" id="camMsg">Starting camera... allow permission</div>
+      </div>
+      <div class="bar">
+        <span class="chip">Target: <b id="tgt">-</b></span>
+        <span class="chip">X: <b id="px">-</b></span>
+        <span class="chip">Y: <b id="py">-</b></span>
+        <span class="chip">FPS: <b id="fps">0</b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Choose Ball Color</h3>
+      <div class="btns">
+        <button class="cbtn" data-n="1" style="--c:#ff3b5c"><span class="n">1</span><span><strong>RED</strong><small>Pick the red ball</small></span></button>
+        <button class="cbtn" data-n="2" style="--c:#2f8bff"><span class="n">2</span><span><strong>BLUE</strong><small>Pick the blue ball</small></span></button>
+        <button class="cbtn" data-n="3" style="--c:#25e08a"><span class="n">3</span><span><strong>GREEN</strong><small>Pick the green ball</small></span></button>
+      </div>
+      <div class="steps">
+        <div class="step"><span>1</span>Button</div>
+        <div class="step"><span>2</span>Scan</div>
+        <div class="step"><span>3</span>Locked</div>
+        <div class="step"><span>4</span>Pick</div>
+      </div>
+      <div id="status">Ready. Press a button (or key 1 / 2 / 3).</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const BTN={1:'RED',2:'BLUE',3:'GREEN'};
+const COL={RED:'#ff3b5c',BLUE:'#2f8bff',GREEN:'#25e08a'};
+const W=160,H=120,STABLE=8,SEARCH_MS=6000,ARM_MS=30000,SIM_MS=3500,MIN_PX=60;
+let state='IDLE',target=null,hist=[],t0=0,port=null,writer=null,stream=null,armTimer=null;
+const video=$('#video'),ov=$('#ov'),octx2=ov.getContext('2d');
+const off=document.createElement('canvas');off.width=W;off.height=H;
+const octx=off.getContext('2d',{willReadFrequently:true});
+const enc=new TextEncoder();
+
+function log(m,c=''){const d=document.createElement('div');d.className=c;d.innerHTML='<b>'+new Date().toLocaleTimeString()+'</b>'+m;const l=$('#log');l.prepend(d);while(l.children.length>40)l.lastChild.remove()}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+function setStatus(m){$('#status').innerHTML=m}
+function setSteps(n){$$('.step').forEach((s,i)=>{s.classList.toggle('done',i<n);s.classList.toggle('active',i===n)})}
+function syncButtons(){
+  $$('.cbtn').forEach(b=>{const on=state!=='IDLE';b.classList.toggle('busy',on);b.classList.toggle('active',on&&BTN[b.dataset.n]===target)});
+  $('#cam').classList.toggle('scanning',state==='SEARCH');
+  $('#tgt').textContent=target||'-';
+}
+
+/* ---------- welcome -> app ---------- */
+$('#enterBtn').onclick=()=>{
+  $('#welcome').classList.add('out');
+  setTimeout(()=>{$('#welcome').style.display='none';$('#app').classList.add('show');startCam()},600);
+};
+
+/* ---------- camera ---------- */
+async function startCam(id){
+  try{
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({video:id?{deviceId:{exact:id},width:640,height:480}:{width:640,height:480}});
+    video.srcObject=stream;
+    await video.play();
+    $('#camMsg').style.display='none';
+    $('#pCam').classList.add('on');$('#pCam span').textContent='Camera live';
+    const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+    const cur=stream.getVideoTracks()[0].getSettings().deviceId;
+    $('#camSel').innerHTML=devs.map((d,i)=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label||'Camera '+(i+1)}</option>`).join('');
+    log('Camera started','ok');
+  }catch(e){
+    $('#camMsg').style.display='flex';
+    $('#camMsg').textContent='Camera blocked or not found. Allow camera access and reload.';
+    log('Camera error: '+e.message,'bad');
+  }
+}
+$('#camSel').onchange=e=>startCam(e.target.value);
+
+/* ---------- robot arm (Web Serial) ---------- */
+$('#connBtn').onclick=async()=>{
+  if(!('serial' in navigator)){toast('Use Chrome or Edge for USB connection');return}
+  try{
+    port=await navigator.serial.requestPort();
+    await port.open({baudRate:115200});
+    writer=port.writable.getWriter();
+    $('#pArm').classList.add('on');$('#pArm span').textContent='Arm: Connected';
+    log('Arm connected (115200)','ok');readLoop();
+  }catch(e){log('Serial: '+e.message,'bad')}
+};
+async function readLoop(){
+  const rd=port.readable.getReader(),dec=new TextDecoder();let buf='';
+  try{while(true){const {value,done}=await rd.read();if(done)break;buf+=dec.decode(value);let i;
+    while((i=buf.indexOf('\n'))>=0){armMsg(buf.slice(0,i).trim().toUpperCase());buf=buf.slice(i+1)}}}
+  catch(e){log('Serial closed','bad')}
+}
+function armMsg(m){
+  if(/^BTN[123]$/.test(m)){log('Arm button '+m,'tx');press(+m[3])}
+  else if(m==='DONE')armDone();
+}
+function send(m){log('&rarr; '+m,'tx');if(writer)writer.write(enc.encode(m+'\n'))}
+
+/* ---------- controller ---------- */
+function press(n){
+  if(state!=='IDLE'){toast('Arm is busy, wait...');return}
+  target=BTN[n];state='SEARCH';hist=[];t0=performance.now();
+  setSteps(1);syncButtons();
+  setStatus('Searching for <b style="color:'+COL[target]+'">'+target+'</b> ball...');
+  log('Button '+n+' &rarr; '+target);
+}
+function armDone(){
+  if(state!=='WAIT')return;
+  clearTimeout(armTimer);state='IDLE';target=null;setSteps(4);syncButtons();
+  setStatus('Pick complete. Ready for next button.');log('Arm DONE','ok');
+  setTimeout(()=>{if(state==='IDLE')setSteps(0)},1500);
+}
+function update(found,now){
+  if(state==='SEARCH'){
+    const f=found[target];
+    if(f)hist.push([f.x,f.y]);else hist=[];
+    if(hist.length>=STABLE){
+      const h=hist.slice(-STABLE),x=Math.round(h.reduce((a,p)=>a+p[0],0)/STABLE*4),y=Math.round(h.reduce((a,p)=>a+p[1],0)/STABLE*4);
+      $('#px').textContent=x;$('#py').textContent=y;
+      state='WAIT';setSteps(3);syncButtons();
+      setStatus('<b style="color:'+COL[target]+'">'+target+'</b> ball locked at ('+x+', '+y+'). Robot picking...');
+      send('PICK,'+target+','+x+','+y);
+      armTimer=setTimeout(armDone,port?ARM_MS:SIM_MS);
+      if(!port)log('Simulation mode: arm not connected');
+    }else if(now-t0>SEARCH_MS){
+      send('NOTFOUND,'+target);log(target+' ball not found','bad');
+      setStatus('<b style="color:var(--red)">'+target+' ball not found.</b> Place it in view and try again.');
+      state='IDLE';target=null;setSteps(0);syncButtons();
+    }else if(hist.length>0)setSteps(2);
+  }
+}
+
+/* ---------- vision loop ---------- */
+function classify(r,g,b){
+  r/=255;g/=255;b/=255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  if(mx<.27||d===0)return 0;
+  const s=d/mx;let h;
+  if(mx===r)h=60*(((g-b)/d+6)%6);else if(mx===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4);
+  if((h<20||h>340)&&s>.47)return 1;
+  if(h>=80&&h<=170&&s>.35)return 2;
+  if(h>=190&&h<=260&&s>.47)return 3;
+  return 0;
+}
+const NAMES=['','RED','GREEN','BLUE'];
+let lastT=performance.now(),fc=0;
+function loop(now){
+  requestAnimationFrame(loop);
+  if(video.readyState<2)return;
+  if(ov.width!==video.videoWidth){ov.width=video.videoWidth;ov.height=video.videoHeight}
+  octx.drawImage(video,0,0,W,H);
+  const d=octx.getImageData(0,0,W,H).data;
+  const acc=[0,{n:0,x:0,y:0},{n:0,x:0,y:0},{n:0,x:0,y:0}];
+  for(let i=0,p=0;i<d.length;i+=4,p++){
+    const k=classify(d[i],d[i+1],d[i+2]);
+    if(k){const a=acc[k];a.n++;a.x+=p%W;a.y+=(p/W)|0}
+  }
+  const found={};
+  for(let k=1;k<=3;k++){const a=acc[k];if(a.n>=MIN_PX)found[NAMES[k]]={x:a.x/a.n,y:a.y/a.n,r:Math.sqrt(a.n/Math.PI)}}
+  update(found,performance.now());
+
+  const sx=ov.width/W,sy=ov.height/H;
+  octx2.clearRect(0,0,ov.width,ov.height);
+  for(const [nm,f] of Object.entries(found)){
+    const tg=nm===target,cx=f.x*sx,cy=f.y*sy,r=Math.max(f.r*sx*1.3,14);
+    octx2.strokeStyle=COL[nm];octx2.lineWidth=tg?5:2;
+    octx2.setLineDash(tg?[10,6]:[]);octx2.lineDashOffset=-now/40;
+    octx2.beginPath();octx2.arc(cx,cy,r,0,7);octx2.stroke();
+    if(tg){octx2.setLineDash([]);octx2.beginPath();octx2.moveTo(cx-r-8,cy);octx2.lineTo(cx+r+8,cy);octx2.moveTo(cx,cy-r-8);octx2.lineTo(cx,cy+r+8);octx2.stroke()}
+    octx2.setLineDash([]);octx2.fillStyle=COL[nm];octx2.font='bold 16px Segoe UI';octx2.fillText(nm,cx-r,cy-r-8);
+  }
+  if(++fc>=20){$('#fps').textContent=Math.round(fc*1000/(now-lastT));fc=0;lastT=now}
+}
+requestAnimationFrame(loop);
+
+/* ---------- inputs ---------- */
+$$('.cbtn').forEach(b=>b.addEventListener('click',e=>{
+  const r=document.createElement('span'),bb=b.getBoundingClientRect(),s=Math.max(bb.width,bb.height)/10;
+  r.className='rip';r.style.cssText='width:'+s+'px;height:'+s+'px;left:'+(e.clientX-bb.left-s/2)+'px;top:'+(e.clientY-bb.top-s/2)+'px';
+  b.appendChild(r);setTimeout(()=>r.remove(),700);press(+b.dataset.n);
+}));
+addEventListener('keydown',e=>{if('123'.includes(e.key)&&$('#app').classList.contains('show'))press(+e.key)});
+</script>
+</body>
+</html>
